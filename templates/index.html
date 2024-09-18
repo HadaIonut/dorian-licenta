@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+	<script src="https://unpkg.com/htmx.org@2.0.2"></script>
+	<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+	<script src="https://cdn.jsdelivr.net/npm/chart.js@^3"></script>
+	<script src="https://cdn.jsdelivr.net/npm/moment@^2"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@^1"></script>
+</head>
+
+<body>
+	<select name="panels" id="panels">
+		{{range .files}}
+		<option value="{{.}}">{{.}}</option>
+		{{end}}
+	</select>
+	<div>
+		latest current: <span id="lc"></span>
+	</div>
+	<div>
+		latest voltage: <span id="lv"></span>
+	</div>
+	<canvas id="mainChart"></canvas>
+	<script>
+		const select = document.getElementById("panels")
+		const latestCurrentSpan = document.getElementById("lc")
+		const latestVoltageSpan = document.getElementById("lv")
+
+		let chart
+		select.addEventListener("click", () => {
+			if (chart != null) {
+				chart.destroy()
+			}
+			axios.get(`/data/${select.value}`).then((val) => {
+				const measurements = val.data.data
+				const labels = measurements.map((val) => val.timestamp)
+				const current = measurements.map((val) => val.current)
+				const voltage = measurements.map((val) => val.voltage)
+
+				latestCurrentSpan.innerHTML = current.at(-1)
+				latestVoltageSpan.innerHTML = voltage.at(-1)
+
+				const canvas = document.getElementById("mainChart")
+				chart = new Chart(canvas, {
+					type: "line",
+					data: {
+						labels,
+						datasets: [{
+							data: voltage,
+							label: "voltage",
+							borderColor: "rgb(255,0,0)"
+						}, {
+							data: current,
+							label: "current",
+							borderColor: "rgb(0,0,255)"
+						}]
+					},
+					options: {
+						scales: {
+							x: {
+								type: "time"
+							}
+						}
+					}
+				})
+			})
+		})
+
+	</script>
+</body>
+
+</html>
