@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+fjsdkfsdjkdf
 type SensorOutput struct {
 	Voltage float64 `json:"voltage"`
 	Current float64 `json:"current"`
