@@ -16,9 +16,12 @@
 <body>
 	<select name="panels" id="panels">
 		{{range .files}}
-		<option value="{{.}}">{{.}}</option>
+		<option value="{{.Content}}">{{.Content}}{{if .HasErr}}🔴{{else}}🟢{{end}}</option>
 		{{end}}
 	</select>
+
+	<select name="dataset" id="dataset"></select>
+
 	<div>
 		latest current: <span id="lc"></span>
 	</div>
@@ -28,46 +31,73 @@
 	<canvas id="mainChart"></canvas>
 	<script>
 		const select = document.getElementById("panels")
+		const datasetSelect = document.getElementById("dataset")
+
 		const latestCurrentSpan = document.getElementById("lc")
 		const latestVoltageSpan = document.getElementById("lv")
+		let latestMeasurements;
 
 		let chart
+		datasetSelect.addEventListener("click", () => {
+			if (chart != null) {
+				chart.destroy()
+			}
+
+			const labels = latestMeasurements.map((val) => val.timestamp)
+			const current = latestMeasurements.map((val) => val[datasetSelect.value].current)
+			const voltage = latestMeasurements.map((val) => val[datasetSelect.value].voltage)
+
+			latestCurrentSpan.innerHTML = current.at(-1)
+			latestVoltageSpan.innerHTML = voltage.at(-1)
+
+			const canvas = document.getElementById("mainChart")
+			chart = new Chart(canvas, {
+				type: "line",
+				data: {
+					labels,
+					datasets: [{
+						data: voltage,
+						label: "voltage",
+						borderColor: "rgb(255,0,0)"
+					}, {
+						data: current,
+						label: "current",
+						borderColor: "rgb(0,0,255)"
+					}]
+				},
+				options: {
+					scales: {
+						x: {
+							type: "time"
+						}
+					}
+				}
+			})
+		})
+
 		select.addEventListener("click", () => {
 			if (chart != null) {
 				chart.destroy()
 			}
+
+			while (datasetSelect.hasChildNodes()) {
+				datasetSelect.removeChild(datasetSelect.firstChild);
+			}
 			axios.get(`/data/${select.value}`).then((val) => {
-				const measurements = val.data.data
-				const labels = measurements.map((val) => val.timestamp)
-				const current = measurements.map((val) => val.current)
-				const voltage = measurements.map((val) => val.voltage)
+				latestMeasurements = val.data.data
+				const keys = Object.keys(latestMeasurements.at(-1)).filter((entry) => entry != "timestamp")
 
-				latestCurrentSpan.innerHTML = current.at(-1)
-				latestVoltageSpan.innerHTML = voltage.at(-1)
+				keys.forEach((key, index) => {
+					const hasError = latestMeasurements.at(-1)[key].current === 0 || latestMeasurements.at(-1)[key].voltage === 0
+					const option = document.createElement("option")
+					const optionText = key + (hasError ? '🔴' : '🟢')
 
-				const canvas = document.getElementById("mainChart")
-				chart = new Chart(canvas, {
-					type: "line",
-					data: {
-						labels,
-						datasets: [{
-							data: voltage,
-							label: "voltage",
-							borderColor: "rgb(255,0,0)"
-						}, {
-							data: current,
-							label: "current",
-							borderColor: "rgb(0,0,255)"
-						}]
-					},
-					options: {
-						scales: {
-							x: {
-								type: "time"
-							}
-						}
-					}
+					option.value = key
+					option.innerHTML = optionText
+
+					datasetSelect.appendChild(option)
 				})
+
 			})
 		})
 

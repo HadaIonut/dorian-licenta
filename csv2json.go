@@ -19,7 +19,6 @@ func Csv2Json(path string) ([]map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(parsedJson)
 	return parsedJson, nil
 }
 
